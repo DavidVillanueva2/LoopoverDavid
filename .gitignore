@@ -1,3 +1,6 @@
+# Documentación local (no se versiona)
+/.doc/
+
 # Build (Maven)
 /target/
 *.class
