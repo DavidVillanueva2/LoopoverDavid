@@ -1,3 +1,4 @@
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -12,8 +13,6 @@ import java.util.List;
  * son la fila, los bits 2-3 la columna y el bit 4 vale 1 si el signo es '+'.
  * Con '+' la fila se desplaza a la derecha y la columna hacia abajo; con '-',
  * hacia la izquierda y hacia arriba.
- *
- * TODO Tarea 1: implementar todos los metodos marcados con TODO.
  */
 public final class Estado {
 
@@ -64,13 +63,12 @@ public final class Estado {
     private final long bitboard;
 
     // -------------------------------------------------------------------------
-    // Constructores — TODO Tarea 1
+    // Constructores
     // -------------------------------------------------------------------------
 
     /** Construye el estado directamente desde el bitboard (ya validado). */
     public Estado(long bitboard) {
-        // TODO: almacenar bitboard
-        throw new UnsupportedOperationException("TODO: Tarea 1 - Constructor Estado(long)");
+        this.bitboard = bitboard;
     }
 
     /**
@@ -79,8 +77,25 @@ public final class Estado {
      * Ejemplo: "00010203040506070809101112131415" es el estado resuelto.
      */
     public Estado(String representacion) {
-        // TODO: validar longitud, parsear 16 pares de digitos, llamar a construirBitboard
-        throw new UnsupportedOperationException("TODO: Tarea 1 - Constructor Estado(String)");
+        if (representacion == null) {
+            throw new IllegalArgumentException("El estado no puede ser null");
+        }
+        int esperada = NUM_CASILLAS * 2;
+        if (representacion.length() != esperada) {
+            throw new IllegalArgumentException("El estado debe tener " + esperada
+                    + " digitos y tiene " + representacion.length());
+        }
+        int[] fichas = new int[NUM_CASILLAS];
+        for (int i = 0; i < NUM_CASILLAS; i++) {
+            char c1 = representacion.charAt(i * 2);
+            char c2 = representacion.charAt(i * 2 + 1);
+            if (!esDigito(c1) || !esDigito(c2)) {
+                throw new IllegalArgumentException("La casilla " + i + " no es un par "
+                        + "de digitos: '" + representacion.substring(i * 2, i * 2 + 2) + "'");
+            }
+            fichas[i] = (c1 - '0') * 10 + (c2 - '0');
+        }
+        this.bitboard = construirBitboard(fichas);
     }
 
     /**
@@ -88,18 +103,16 @@ public final class Estado {
      * ficha en la casilla i.
      */
     public Estado(int[] fichas) {
-        // TODO: validar longitud, llamar a construirBitboard
-        throw new UnsupportedOperationException("TODO: Tarea 1 - Constructor Estado(int[])");
+        this.bitboard = construirBitboard(fichas);
     }
 
     // -------------------------------------------------------------------------
-    // Consultas — TODO Tarea 1
+    // Consultas
     // -------------------------------------------------------------------------
 
     /** Devuelve el bitboard interno (necesario para la tabla de visitados). */
     public long bitboard() {
-        // TODO: return bitboard
-        throw new UnsupportedOperationException("TODO: Tarea 1 - bitboard()");
+        return bitboard;
     }
 
     /**
@@ -108,24 +121,22 @@ public final class Estado {
      * Operacion: (bitboard >>> (i * BITS_POR_CASILLA)) & MASCARA_FICHA
      */
     public int ficha(int casilla) {
-        // TODO
-        throw new UnsupportedOperationException("TODO: Tarea 1 - ficha(int)");
+        comprobarCasilla(casilla);
+        return (int) ((bitboard >>> (casilla * BITS_POR_CASILLA)) & MASCARA_FICHA);
     }
 
     /** Devuelve la ficha en la posicion (fila, columna). */
     public int ficha(int fila, int columna) {
-        // TODO: delegar a ficha(fila * LADO + columna)
-        throw new UnsupportedOperationException("TODO: Tarea 1 - ficha(int,int)");
+        return ficha(fila * LADO + columna);
     }
 
     /** Devuelve true si el bitboard es igual al estado resuelto. */
     public boolean esResuelto() {
-        // TODO
-        throw new UnsupportedOperationException("TODO: Tarea 1 - esResuelto()");
+        return bitboard == BITBOARD_RESUELTO;
     }
 
     // -------------------------------------------------------------------------
-    // Sucesores — TODO Tarea 1
+    // Sucesores
     // -------------------------------------------------------------------------
 
     /**
@@ -133,12 +144,15 @@ public final class Estado {
      * Cada sucesor tiene: la accion aplicada, el estado resultante y costo 1.0f.
      */
     public List<Sucesor> sucesores() {
-        // TODO: iterar ACCIONES[], crear new Sucesor(accion, aplicar(accion), 1.0f)
-        throw new UnsupportedOperationException("TODO: Tarea 1 - sucesores()");
+        List<Sucesor> lista = new ArrayList<>(NUM_ACCIONES);
+        for (int accion : ACCIONES) {
+            lista.add(new Sucesor(accion, aplicar(accion), 1.0f));
+        }
+        return lista;
     }
 
     // -------------------------------------------------------------------------
-    // Aplicar acciones — TODO Tarea 1
+    // Aplicar acciones
     // -------------------------------------------------------------------------
 
     /**
@@ -149,12 +163,17 @@ public final class Estado {
      * 4. desplazarColumna(resultado_anterior, columna, positivo)
      */
     public Estado aplicar(int accion) {
-        // TODO
-        throw new UnsupportedOperationException("TODO: Tarea 1 - aplicar(int)");
+        validarAccion(accion);
+        int fila     = accion & MASCARA_FILA_ACCION;
+        int columna  = (accion & MASCARA_COLUMNA_ACCION) >>> 2;
+        boolean positivo = (accion & BIT_SIGNO_ACCION) != 0;
+        long trasFila     = desplazarFila(bitboard, fila, positivo);
+        long trasColumna  = desplazarColumna(trasFila, columna, positivo);
+        return new Estado(trasColumna);
     }
 
     // -------------------------------------------------------------------------
-    // Utilidades de acciones — TODO Tarea 1
+    // Utilidades de acciones
     // -------------------------------------------------------------------------
 
     /**
@@ -162,8 +181,11 @@ public final class Estado {
      * Formato: digito_fila + digito_columna + signo.
      */
     public static String accionComoTexto(int accion) {
-        // TODO
-        throw new UnsupportedOperationException("TODO: Tarea 1 - accionComoTexto(int)");
+        validarAccion(accion);
+        char fila    = (char) ('0' + (accion & MASCARA_FILA_ACCION));
+        char columna = (char) ('0' + ((accion & MASCARA_COLUMNA_ACCION) >>> 2));
+        char signo   = (accion & BIT_SIGNO_ACCION) != 0 ? '+' : '-';
+        return new String(new char[] {fila, columna, signo});
     }
 
     /**
@@ -172,24 +194,58 @@ public final class Estado {
      *          segundo = digito columna 0-3, tercero = '+' o '-'.
      */
     public static int accionDesde(String representacion) {
-        // TODO
-        throw new UnsupportedOperationException("TODO: Tarea 1 - accionDesde(String)");
+        if (representacion == null || representacion.length() != 3) {
+            throw new IllegalArgumentException(
+                    "Una accion debe tener 3 caracteres <fila><columna><signo>: "
+                            + representacion);
+        }
+        char caracterFila    = representacion.charAt(0);
+        char caracterColumna = representacion.charAt(1);
+        char caracterSigno   = representacion.charAt(2);
+        if (!esDigito(caracterFila)) {
+            throw new IllegalArgumentException("El primer caracter no es un digito: "
+                    + representacion);
+        }
+        if (!esDigito(caracterColumna)) {
+            throw new IllegalArgumentException("El segundo caracter no es un digito: "
+                    + representacion);
+        }
+        int fila    = caracterFila - '0';
+        int columna = caracterColumna - '0';
+        if (fila >= LADO) {
+            throw new IllegalArgumentException("Fila fuera de rango (0.." + (LADO - 1)
+                    + "): " + representacion);
+        }
+        if (columna >= LADO) {
+            throw new IllegalArgumentException("Columna fuera de rango (0.." + (LADO - 1)
+                    + "): " + representacion);
+        }
+        if (caracterSigno != '+' && caracterSigno != '-') {
+            throw new IllegalArgumentException("El signo debe ser '+' o '-': "
+                    + representacion);
+        }
+        return fila | (columna << 2)
+                | (caracterSigno == '+' ? BIT_SIGNO_ACCION : 0);
     }
 
     // -------------------------------------------------------------------------
-    // equals, hashCode, toString — TODO Tarea 1
+    // equals, hashCode, toString
     // -------------------------------------------------------------------------
 
     @Override
     public boolean equals(Object obj) {
-        // TODO: comparar bitboard con instanceof Estado
-        throw new UnsupportedOperationException("TODO: Tarea 1 - equals(Object)");
+        if (this == obj) {
+            return true;
+        }
+        if (!(obj instanceof Estado)) {
+            return false;
+        }
+        return bitboard == ((Estado) obj).bitboard;
     }
 
     @Override
     public int hashCode() {
-        // TODO: Long.hashCode(bitboard)
-        throw new UnsupportedOperationException("TODO: Tarea 1 - hashCode()");
+        return Long.hashCode(bitboard);
     }
 
     /**
@@ -199,12 +255,19 @@ public final class Estado {
      */
     @Override
     public String toString() {
-        // TODO: StringBuilder, para cada casilla i → ficha(i) con cero inicial si < 10
-        throw new UnsupportedOperationException("TODO: Tarea 1 - toString()");
+        StringBuilder sb = new StringBuilder(NUM_CASILLAS * 2);
+        for (int i = 0; i < NUM_CASILLAS; i++) {
+            int ficha = ficha(i);
+            if (ficha < 10) {
+                sb.append('0');
+            }
+            sb.append(ficha);
+        }
+        return sb.toString();
     }
 
     // =========================================================================
-    // Metodos privados de ayuda — TODO Tarea 1
+    // Metodos privados de ayuda
     // =========================================================================
 
     /**
@@ -213,8 +276,25 @@ public final class Estado {
      * Validar: sin duplicados, cada ficha en [0, NUM_CASILLAS).
      */
     private static long construirBitboard(int[] fichas) {
-        // TODO
-        throw new UnsupportedOperationException("TODO: Tarea 1 - construirBitboard(int[])");
+        if (fichas == null || fichas.length != NUM_CASILLAS) {
+            throw new IllegalArgumentException("Se esperaban " + NUM_CASILLAS
+                    + " fichas y hay " + (fichas == null ? 0 : fichas.length));
+        }
+        boolean[] vistos = new boolean[NUM_CASILLAS];
+        long resultado = 0L;
+        for (int i = 0; i < NUM_CASILLAS; i++) {
+            int ficha = fichas[i];
+            if (ficha < 0 || ficha >= NUM_CASILLAS) {
+                throw new IllegalArgumentException("Ficha fuera de rango en la casilla "
+                        + i + ": " + ficha + " (debe estar en [0, " + NUM_CASILLAS + "))");
+            }
+            if (vistos[ficha]) {
+                throw new IllegalArgumentException("Ficha duplicada: " + ficha);
+            }
+            vistos[ficha] = true;
+            resultado |= ((long) ficha) << (i * BITS_POR_CASILLA);
+        }
+        return resultado;
     }
 
     /**
@@ -233,8 +313,20 @@ public final class Estado {
      *   rotada = ((extraida >>> 4) & mascaraFila) | ((extraida << 12) & mascaraTope)
      */
     private static long desplazarFila(long bitboard, int fila, boolean positivo) {
-        // TODO
-        throw new UnsupportedOperationException("TODO: Tarea 1 - desplazarFila");
+        int desplazamientoFila = fila * BITS_POR_FILA_TABLERO;
+        long mascaraFila       = MASCARA_FILA_TABLERO << desplazamientoFila;
+        long extraida          = bitboard & mascaraFila;
+        long mascaraRetorno    = MASCARA_FICHA << desplazamientoFila;
+        long rotada;
+        if (positivo) {
+            rotada = ((extraida << BITS_POR_CASILLA) & mascaraFila)
+                    | ((extraida >>> (BITS_POR_FILA_TABLERO - BITS_POR_CASILLA)) & mascaraRetorno);
+        } else {
+            long mascaraTope = mascaraRetorno << (BITS_POR_FILA_TABLERO - BITS_POR_CASILLA);
+            rotada = ((extraida >>> BITS_POR_CASILLA) & mascaraFila)
+                    | ((extraida << (BITS_POR_FILA_TABLERO - BITS_POR_CASILLA)) & mascaraTope);
+        }
+        return (bitboard & ~mascaraFila) | rotada;
     }
 
     /**
@@ -253,8 +345,21 @@ public final class Estado {
      *   rotada = ((extraida >>> 16) & mascaraColumna) | ((extraida << 48) & mascaraSuperior)
      */
     private static long desplazarColumna(long bitboard, int columna, boolean positivo) {
-        // TODO
-        throw new UnsupportedOperationException("TODO: Tarea 1 - desplazarColumna");
+        int desplazamientoColumna = columna * BITS_POR_CASILLA;
+        long mascaraColumna       = MASCARA_COLUMNA_TABLERO << desplazamientoColumna;
+        long extraida             = bitboard & mascaraColumna;
+        long mascaraRetorno       = MASCARA_FICHA << desplazamientoColumna;
+        long rotada;
+        if (positivo) {
+            rotada = ((extraida << 16) & mascaraColumna)
+                    | ((extraida >>> 48) & mascaraRetorno);
+        } else {
+            long mascaraSuperior = 0xF000000000000000L
+                    >>> (BITS_POR_FILA_TABLERO - LADO - desplazamientoColumna);
+            rotada = ((extraida >>> 16) & mascaraColumna)
+                    | ((extraida << 48) & mascaraSuperior);
+        }
+        return (bitboard & ~mascaraColumna) | rotada;
     }
 
     private static void comprobarCasilla(int casilla) {
