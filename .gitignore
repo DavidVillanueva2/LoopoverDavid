@@ -1,5 +1,6 @@
 # Documentación local (no se versiona)
 /.doc/
+/loopover_engranado_4x4.md
 
 # Build (Maven)
 /target/
