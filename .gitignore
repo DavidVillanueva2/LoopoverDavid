@@ -8,6 +8,9 @@
 *.class
 *.jar
 
+# Build de los tests
+/test/build/
+
 # Recursos generados localmente
 *.dat
 
