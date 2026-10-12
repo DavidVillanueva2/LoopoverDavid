@@ -127,6 +127,14 @@ public final class Estado {
 
     /** Devuelve la ficha en la posicion (fila, columna). */
     public int ficha(int fila, int columna) {
+        if (fila < 0 || fila >= LADO) {
+            throw new IllegalArgumentException(
+                    "Fila fuera de rango (0.." + (LADO - 1) + "): " + fila);
+        }
+        if (columna < 0 || columna >= LADO) {
+            throw new IllegalArgumentException(
+                    "Columna fuera de rango (0.." + (LADO - 1) + "): " + columna);
+        }
         return ficha(fila * LADO + columna);
     }
 
